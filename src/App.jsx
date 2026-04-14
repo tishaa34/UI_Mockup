@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import {
   ResponsiveContainer,
   BarChart,
@@ -102,6 +104,17 @@ function DemoTable({ columns, rows }) {
   );
 }
 
+function DownloadActionButton({ onClick, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-4 py-2 rounded-2xl bg-indigo-50 text-indigo-700 text-sm font-medium shadow-sm hover:bg-indigo-100 transition"
+    >
+      {label}
+    </button>
+  );
+}
+
 function downloadCSV(filename, rows) {
   if (!rows?.length) return;
   const headers = Object.keys(rows[0]);
@@ -124,10 +137,52 @@ function printStudentPDF() {
   window.print();
 }
 
-function DashboardFrame({ title, subtitle, filters, headerAction, children }) {
+function DashboardFrame({ title, subtitle, filters, headerAction, breadcrumb, children }) {
+  const frameRef = useRef(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!frameRef.current || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      const canvas = await html2canvas(frameRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#f6f7fb",
+        windowWidth: frameRef.current.scrollWidth,
+      });
+
+      const imageData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imageHeight = (canvas.height * pageWidth) / canvas.width;
+
+      let heightLeft = imageHeight;
+      let position = 0;
+
+      pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight, undefined, "FAST");
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imageHeight;
+        pdf.addPage();
+        pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight, undefined, "FAST");
+        heightLeft -= pageHeight;
+      }
+
+      const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      pdf.save(`${safeTitle || "dashboard"}.pdf`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div ref={frameRef} className="space-y-6">
       <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 text-white p-8 rounded-[28px] shadow-md">
+        {breadcrumb ? <div className="text-xs uppercase tracking-[0.24em] text-indigo-100 mb-4">{breadcrumb}</div> : null}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold">{title}</h1>
@@ -135,6 +190,12 @@ function DashboardFrame({ title, subtitle, filters, headerAction, children }) {
           </div>
           <div className="flex flex-wrap gap-3 items-center">
             {filters}
+            <button
+              onClick={handleDownloadPdf}
+              className="px-4 py-2 rounded-2xl bg-white text-indigo-700 shadow-sm font-medium"
+            >
+              {isExportingPdf ? "Preparing PDF..." : "Download PDF"}
+            </button>
             {headerAction}
           </div>
         </div>
@@ -406,6 +467,27 @@ const studentDirectoryRows = [
   { name: "Rohan Kulkarni", institute: "Innovation School", className: "Grade 9", lastLogin: "18 days ago", status: "Inactive", completion: "21%", quiz: "52%", impact: "C" },
 ];
 
+const departmentName = "Yuva Unstoppable";
+
+function getCourseBreakdown(rows) {
+  return Object.values(
+    rows.reduce((acc, curr) => {
+      if (!acc[curr.course]) {
+        acc[curr.course] = { name: curr.course, enroll: 0, complete: 0, scoreTotal: 0, count: 0 };
+      }
+      acc[curr.course].enroll += curr.enroll;
+      acc[curr.course].complete += curr.complete;
+      acc[curr.course].scoreTotal += curr.postScore;
+      acc[curr.course].count += 1;
+      return acc;
+    }, {})
+  ).map((course) => ({
+    ...course,
+    completionRate: course.enroll ? Math.round((course.complete / course.enroll) * 100) : 0,
+    avgScore: course.count ? Math.round(course.scoreTotal / course.count) : 0,
+  }));
+}
+
 /* -------------------- DASHBOARDS -------------------- */
 
 function InsightsDashboard() {
@@ -514,9 +596,9 @@ function InsightsDashboard() {
   );
 }
 
-function CourseDashboard() {
-  const selectedCourse = "AI Basics";
+function CourseDashboard({ selectedCourse, departmentContext, onBackToDepartment }) {
   const rows = analyticsData.filter((r) => r.course === selectedCourse);
+  const activeCourse = rows[0]?.course || selectedCourse || analyticsData[0]?.course || "Course";
 
   const totals = rows.reduce(
     (acc, curr) => {
@@ -531,6 +613,12 @@ function CourseDashboard() {
     },
     { institutes: new Set(), instructors: new Set(), students: 0, completions: 0, rating: 0, active: 0, count: 0 }
   );
+
+  const averageTimeSpent = totals.count ? (rows.reduce((sum, row) => sum + row.timeSpent, 0) / totals.count).toFixed(1) : "0.0";
+  const averageQuizScore = totals.count ? Math.round(rows.reduce((sum, row) => sum + row.postScore, 0) / totals.count) : 0;
+  const inProgressCount = Math.max(Math.round((totals.students - totals.completions) * 0.7), 0);
+  const notStartedCount = Math.max(totals.students - totals.completions - inProgressCount, 0);
+  const courseTrendData = rows.map((row) => ({ period: row.month, active: row.activeLearners }));
 
   const instituteRows = rows.map((row) => ({
     institute: row.institute,
@@ -563,22 +651,36 @@ function CourseDashboard() {
 
   return (
     <DashboardFrame
-      title="Course Dashboard — AI Basics"
-      subtitle="Course header, health snapshot, content status, institutes, instructors, and learner performance."
+      title={`Course Dashboard - ${activeCourse}`}
+      subtitle="Detailed performance view for the selected course, including institute, instructor, and student-level detail."
+      breadcrumb={departmentContext ? `Departments / ${departmentContext} / ${activeCourse}` : `Courses / ${activeCourse}`}
       filters={
         <>
+          {departmentContext ? (
+            <button className="px-4 py-2 rounded-2xl bg-indigo-50 text-indigo-700 shadow-sm">{`Department: ${departmentContext}`}</button>
+          ) : null}
           <button className="px-4 py-2 rounded-2xl bg-white text-slate-700 shadow-sm">Category: STEM</button>
           <button className="px-4 py-2 rounded-2xl bg-white text-slate-700 shadow-sm">Level: Beginner</button>
           <button className="px-4 py-2 rounded-2xl bg-white text-slate-700 shadow-sm">Language: English</button>
         </>
       }
       headerAction={
-        <button
-          onClick={() => downloadCSV("course-dashboard.csv", rows)}
-          className="px-4 py-2 rounded-2xl bg-white text-indigo-700 shadow-sm font-medium"
-        >
-          Download Course CSV
-        </button>
+        <>
+          {departmentContext ? (
+            <button
+              onClick={onBackToDepartment}
+              className="px-4 py-2 rounded-2xl bg-indigo-950/20 text-white border border-white/20 shadow-sm font-medium"
+            >
+              Back to Department
+            </button>
+          ) : null}
+          <button
+            onClick={() => downloadCSV("course-dashboard.csv", rows)}
+            className="px-4 py-2 rounded-2xl bg-white text-indigo-700 shadow-sm font-medium"
+          >
+            Download Course CSV
+          </button>
+        </>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
@@ -591,12 +693,7 @@ function CourseDashboard() {
           subtext="Overall course completion"
           accent="text-emerald-700"
         />
-        <MetricCard
-          title="Course Rating"
-          value={(totals.rating / totals.count).toFixed(1)}
-          subtext="Learner feedback score"
-          accent="text-violet-700"
-        />
+        <MetricCard title="Active Learners" value={totals.active} subtext="Recent engaged learners" accent="text-violet-700" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -604,15 +701,15 @@ function CourseDashboard() {
           <CardBody>
             <SectionTitle title="Course Health Snapshot" subtitle="Progress status, engagement, and performance." />
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Not Started</div><div className="text-2xl font-bold mt-2">10</div></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">In Progress</div><div className="text-2xl font-bold mt-2 text-amber-700">20</div></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Completed</div><div className="text-2xl font-bold mt-2 text-emerald-700">150</div></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Avg Time</div><div className="text-2xl font-bold mt-2 text-indigo-700">2.1h</div></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Final Quiz</div><div className="text-2xl font-bold mt-2 text-violet-700">80%</div></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Not Started</div><div className="text-2xl font-bold mt-2">{notStartedCount}</div></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">In Progress</div><div className="text-2xl font-bold mt-2 text-amber-700">{inProgressCount}</div></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Completed</div><div className="text-2xl font-bold mt-2 text-emerald-700">{totals.completions}</div></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Avg Time</div><div className="text-2xl font-bold mt-2 text-indigo-700">{averageTimeSpent}h</div></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><div className="text-sm text-slate-500">Final Quiz</div><div className="text-2xl font-bold mt-2 text-violet-700">{averageQuizScore}%</div></div>
             </div>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
+                <AreaChart data={courseTrendData}>
                   <XAxis dataKey="period" />
                   <YAxis />
                   <Tooltip />
@@ -637,7 +734,7 @@ function CourseDashboard() {
               </div>
               <div className="p-4 rounded-2xl bg-indigo-50">
                 <div className="font-medium text-indigo-700">Last 30-day active learners</div>
-                <div className="text-sm text-indigo-600 mt-1">132 active learners remain engaged.</div>
+                <div className="text-sm text-indigo-600 mt-1">{totals.active} active learners remain engaged.</div>
               </div>
             </div>
           </CardBody>
@@ -646,13 +743,17 @@ function CourseDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Content & Assessment Status" subtitle="Module name, type, completion, score, and drop-off points." />
+          <SectionTitle
+            title="Content & Assessment Status"
+            subtitle="Module name, type, completion, score, and drop-off points."
+            action={<DownloadActionButton onClick={() => downloadCSV("course-content-assessment.csv", moduleData)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "module", label: "Module" },
               { key: "type", label: "Type" },
               { key: "completion", label: "Completion %", render: (v) => `${v}%` },
-              { key: "score", label: "Avg Score", render: (v) => (v ? `${v}%` : "—") },
+              { key: "score", label: "Avg Score", render: (v) => (v ? `${v}%` : "-") },
               { key: "dropOff", label: "Drop-off", render: (v) => `${v}%` },
             ]}
             rows={moduleData}
@@ -662,7 +763,11 @@ function CourseDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Institutes Running This Course" subtitle="Institute, location, instructor, student count, and completion." />
+          <SectionTitle
+            title="Institutes Running This Course"
+            subtitle="Institute, location, instructor, student count, and completion."
+            action={<DownloadActionButton onClick={() => downloadCSV("course-institutes.csv", instituteRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "institute", label: "Institute" },
@@ -680,7 +785,11 @@ function CourseDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Instructors for This Course" subtitle="Track instructor load, backlog, and recent activity." />
+          <SectionTitle
+            title="Instructors for This Course"
+            subtitle="Track instructor load, backlog, and recent activity."
+            action={<DownloadActionButton onClick={() => downloadCSV("course-instructors.csv", courseInstructorRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "name", label: "Instructor Name" },
@@ -696,7 +805,11 @@ function CourseDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Student Enrollment & Performance" subtitle="Student name, institute, class, status, modules, grade, time spent, and last activity." />
+          <SectionTitle
+            title="Student Enrollment & Performance"
+            subtitle="Student name, institute, class, status, modules, grade, time spent, and last activity."
+            action={<DownloadActionButton onClick={() => downloadCSV("course-students.csv", learnerRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "name", label: "Student Name" },
@@ -809,7 +922,11 @@ function StudentDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Course List" subtitle="Course title, status, progress, time spent, next action, quiz, certificate, and progress report." />
+          <SectionTitle
+            title="Course List"
+            subtitle="Course title, status, progress, time spent, next action, quiz, certificate, and progress report."
+            action={<DownloadActionButton onClick={() => downloadCSV("student-course-list.csv", studentCourses)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "title", label: "Course Title" },
@@ -854,7 +971,11 @@ function StudentDashboard() {
 
         <Card className="xl:col-span-2">
           <CardBody>
-            <SectionTitle title="Detailed Activity Breakdown" subtitle="Activity/chapter-wise status, modules, score, and progress." />
+            <SectionTitle
+              title="Detailed Activity Breakdown"
+              subtitle="Activity/chapter-wise status, modules, score, and progress."
+              action={<DownloadActionButton onClick={() => downloadCSV("student-activity-breakdown.csv", progressBreakdown)} label="Download CSV" />}
+            />
             <DemoTable
               columns={[
                 { key: "activity", label: "Activity / Chapter" },
@@ -880,11 +1001,27 @@ function StudentDashboard() {
   );
 }
 
-function DepartmentDashboard() {
+function DepartmentDashboard({ selectedCourse, onOpenCourse }) {
+  const courseBreakdown = useMemo(() => getCourseBreakdown(analyticsData), []);
+  const totalStudents = analyticsData.reduce((sum, row) => sum + row.enroll, 0);
+  const totalCompletions = analyticsData.reduce((sum, row) => sum + row.complete, 0);
+  const instructorCount = new Set(analyticsData.map((row) => row.instructor)).size;
+  const instituteCount = new Set(analyticsData.map((row) => row.institute)).size;
+  const summaryRow = [
+    {
+      name: departmentName,
+      courses: courseBreakdown.length,
+      instructors: instructorCount,
+      institutes: instituteCount,
+      students: totalStudents,
+      status: "Active",
+    },
+  ];
   return (
     <DashboardFrame
-      title="Department Dashboard — Yuva Unstoppable"
-      subtitle="Department details page with course breakdown, instructor leaderboard, institute map, student directory, and status control."
+      title={`Department Dashboard - ${departmentName}`}
+      subtitle="Department overview with course drilldown, institute coverage, instructor performance, and student-level detail."
+      breadcrumb={`Departments / ${departmentName}`}
       filters={
         <>
           <button className="px-4 py-2 rounded-2xl bg-white text-slate-700 shadow-sm">Quarter: Q1</button>
@@ -894,7 +1031,7 @@ function DepartmentDashboard() {
       }
       headerAction={
         <button
-          onClick={() => downloadCSV("department-report.csv", departmentRows)}
+          onClick={() => downloadCSV("department-report.csv", summaryRow)}
           className="px-4 py-2 rounded-2xl bg-white text-indigo-700 shadow-sm font-medium"
         >
           Download Department CSV
@@ -902,11 +1039,11 @@ function DepartmentDashboard() {
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-        <MetricCard title="Courses Assigned" value="5" subtext="Across partner ecosystem" />
-        <MetricCard title="Instructors" value="50" subtext="Active trainers" />
-        <MetricCard title="Institutes" value="200" subtext="Mapped institutes" />
-        <MetricCard title="Total Students" value="50,000" subtext="Enrolled students" />
-        <MetricCard title="Avg Completion" value="74%" subtext="Department-wide" accent="text-emerald-700" />
+        <MetricCard title="Courses Assigned" value={courseBreakdown.length} subtext="Across partner ecosystem" />
+        <MetricCard title="Instructors" value={instructorCount} subtext="Active trainers" />
+        <MetricCard title="Institutes" value={instituteCount} subtext="Mapped institutes" />
+        <MetricCard title="Total Students" value={totalStudents} subtext="Enrolled students" />
+        <MetricCard title="Avg Completion" value={`${Math.round((totalCompletions / totalStudents) * 100)}%`} subtext="Department-wide" accent="text-emerald-700" />
         <MetricCard title="Status" value="Active" subtext="Master toggle enabled" accent="text-violet-700" />
       </div>
 
@@ -915,7 +1052,12 @@ function DepartmentDashboard() {
           <SectionTitle
             title="Department Master Overview"
             subtitle="Summary of assigned courses, institutes, instructors, and students."
-            action={<button className="px-4 py-2 rounded-2xl bg-rose-50 text-rose-700 text-sm">Disable Department</button>}
+            action={
+              <div className="flex flex-wrap gap-2 justify-end">
+                <DownloadActionButton onClick={() => downloadCSV("department-master-overview.csv", summaryRow)} label="Download CSV" />
+                <button className="px-4 py-2 rounded-2xl bg-rose-50 text-rose-700 text-sm">Disable Department</button>
+              </div>
+            }
           />
           <DemoTable
             columns={[
@@ -926,7 +1068,7 @@ function DepartmentDashboard() {
               { key: "students", label: "Total Students" },
               { key: "status", label: "Status", render: (v) => <StatusPill tone="success">{v}</StatusPill> },
             ]}
-            rows={departmentRows}
+            rows={summaryRow}
           />
         </CardBody>
       </Card>
@@ -934,23 +1076,33 @@ function DepartmentDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Card>
           <CardBody>
-            <SectionTitle title="Course Breakdown" subtitle="Names, total students, average completion, and score." />
+            <SectionTitle title="Course Performance" subtitle="Enrollments vs completions by course." />
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={[
-                    { course: "AI Basics", students: 16000, completion: 78 },
-                    { course: "Robotics", students: 14000, completion: 71 },
-                    { course: "Financial Literacy", students: 11000, completion: 75 },
-                    { course: "STEM Basics", students: 9000, completion: 69 },
-                  ]}
-                >
-                  <XAxis dataKey="course" />
-                  <YAxis />
+                <BarChart data={courseBreakdown}>
+                  <XAxis dataKey="name" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="students" fill="#5b5ff7" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="completion" fill="#4db6ac" radius={[8, 8, 0, 0]} />
+                  <Bar
+                    yAxisId="left"
+                    name="Enrollments"
+                    dataKey="enroll"
+                    fill="#5b5ff7"
+                    radius={[8, 8, 0, 0]}
+                    onClick={(data) => onOpenCourse(data?.name || data?.payload?.name)}
+                    cursor="pointer"
+                  />
+                  <Bar
+                    yAxisId="right"
+                    name="Completion %"
+                    dataKey="completionRate"
+                    fill="#ff8a65"
+                    radius={[8, 8, 0, 0]}
+                    onClick={(data) => onOpenCourse(data?.name || data?.payload?.name)}
+                    cursor="pointer"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -959,7 +1111,11 @@ function DepartmentDashboard() {
 
         <Card>
           <CardBody>
-            <SectionTitle title="Institute Map / List" subtitle="Institute name, city, trainer, student count, completion, and improvement." />
+            <SectionTitle
+              title="Institute Map / List"
+              subtitle="Institute name, city, trainer, student count, completion, and improvement."
+              action={<DownloadActionButton onClick={() => downloadCSV("department-institute-list.csv", instituteMapRows)} label="Download CSV" />}
+            />
             <DemoTable
               columns={[
                 { key: "name", label: "Institute" },
@@ -977,7 +1133,11 @@ function DepartmentDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Instructor Leaderboard" subtitle="Instructor name, institutes, students, completion, improvement, last login, and status." />
+          <SectionTitle
+            title="Instructor Leaderboard"
+            subtitle="Instructor name, institutes, students, completion, improvement, last login, and status."
+            action={<DownloadActionButton onClick={() => downloadCSV("department-instructors.csv", instructorRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "name", label: "Instructor Name" },
@@ -995,7 +1155,11 @@ function DepartmentDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Student Directory" subtitle="Student name, institute, class, last login, status, completion, quiz score, and impact grade." />
+          <SectionTitle
+            title="Student Directory"
+            subtitle="Student name, institute, class, last login, status, completion, quiz score, and impact grade."
+            action={<DownloadActionButton onClick={() => downloadCSV("department-student-directory.csv", studentDirectoryRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "name", label: "Student Name" },
@@ -1058,7 +1222,11 @@ function InstituteDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Institute Master List" subtitle="Institute name, city/state, board, trainer, students, and active status." />
+          <SectionTitle
+            title="Institute Master List"
+            subtitle="Institute name, city/state, board, trainer, students, and active status."
+            action={<DownloadActionButton onClick={() => downloadCSV("institute-master-list.csv", instituteDirectoryRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "institute", label: "Institute Name" },
@@ -1113,12 +1281,7 @@ function InstituteDashboard() {
             title="Students Enrolled (Drill-down)"
             subtitle="Student-level institute report with CSV export fields."
             action={
-              <button
-                onClick={() => downloadCSV("students-institute-report.csv", studentDirectoryRows)}
-                className="px-4 py-2 rounded-2xl bg-indigo-600 text-white text-sm"
-              >
-                Download Institute Report
-              </button>
+              <DownloadActionButton onClick={() => downloadCSV("students-institute-report.csv", studentDirectoryRows)} label="Download CSV" />
             }
           />
           <DemoTable
@@ -1181,7 +1344,11 @@ function InstructorDashboard() {
 
       <Card>
         <CardBody>
-          <SectionTitle title="Instructor Leaderboard" subtitle="Instructor, institute load, students, completion, improvement, and activity." />
+          <SectionTitle
+            title="Instructor Leaderboard"
+            subtitle="Instructor, institute load, students, completion, improvement, and activity."
+            action={<DownloadActionButton onClick={() => downloadCSV("instructor-leaderboard.csv", instructorRows)} label="Download CSV" />}
+          />
           <DemoTable
             columns={[
               { key: "name", label: "Instructor Name" },
@@ -1226,6 +1393,13 @@ const tabs = ["insights", "course", "student", "department", "institute", "instr
 
 export default function App() {
   const [tab, setTab] = useState("insights");
+  const [selectedCourse, setSelectedCourse] = useState(analyticsData[0]?.course ?? "");
+
+  const openDepartmentCourse = (courseName) => {
+    if (!courseName) return;
+    setSelectedCourse(courseName);
+    setTab("course");
+  };
 
   return (
     <div className="min-h-screen bg-[#f6f7fb] p-5 md:p-6">
@@ -1245,9 +1419,17 @@ export default function App() {
       </div>
 
       {tab === "insights" && <InsightsDashboard />}
-      {tab === "course" && <CourseDashboard />}
+      {tab === "course" && (
+        <CourseDashboard
+          selectedCourse={selectedCourse}
+          departmentContext={departmentName}
+          onBackToDepartment={() => setTab("department")}
+        />
+      )}
       {tab === "student" && <StudentDashboard />}
-      {tab === "department" && <DepartmentDashboard />}
+      {tab === "department" && (
+        <DepartmentDashboard selectedCourse={selectedCourse} onOpenCourse={openDepartmentCourse} />
+      )}
       {tab === "institute" && <InstituteDashboard />}
       {tab === "instructor" && <InstructorDashboard />}
     </div>
