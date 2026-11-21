@@ -20,11 +20,19 @@ Turn on **Show data sources** (top right) to see the table behind each card.
 | Instructor | Sessions, check-in punctuality, attendance, work logs, grading backlog |
 | Student | Profile, courses, attendance, Blockzie projects, device connections |
 | Blockzie & Devices | Logins, projects, device connections (BLE / Wi-Fi / Serial), templates, downloads |
+| Online & Engagement (**planned**) | Who is online now, active today, peak, 5-minute graph, active / idle / hidden time per person, drill-down platform → department → institute → class, Excel export. Also a small panel on Department and Institute, and "My Activity" on Student |
 
-## Deliberately left out (not in either database today)
+## Planned, not built yet
+
+Online presence and active/idle tracking (Feature Track F-038 to F-044) are shown with a **Planned** label
+and amber source tags. Their sample data (`src/data/presence.js`) follows the designed tables:
+`ActivitySegment`, `UserDailyActivity`, `PresenceSnapshot`, `OrgDailyPresence`. Day = midnight to midnight IST;
+idle after 5 minutes without interaction.
+
+## Deliberately left out (not in either database, not planned yet)
 
 Pre/post assessment scores, score improvement, impact grade, board (CBSE/ICSE), institute map,
-short LMS IDs, kits delivered to schools, live online/idle presence.
+short LMS IDs, kits delivered to schools.
 
 ## Code layout
 

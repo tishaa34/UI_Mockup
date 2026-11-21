@@ -10,9 +10,10 @@ import {
   DashboardFrame, FilterSelect, MetricCard, Section, DataTable, StatusPill, CsvButton
 } from "../components/ui";
 import { COLORS } from "../components/utils";
+import { PresencePanel } from "./PresencePanel";
 
 /* SB-45: Institute Insights. */
-export default function InstituteDashboard({ instituteId, onInstituteChange, onOpenStudent }) {
+export default function InstituteDashboard({ instituteId, onInstituteChange, onOpenStudent, onOpenPresence }) {
   const institute = userById.get(instituteId);
   const department = userById.get(departmentIdOfInstitute.get(instituteId));
 
@@ -126,6 +127,8 @@ export default function InstituteDashboard({ instituteId, onInstituteChange, onO
         <MetricCard title="Attendance" value={`${field.attendanceRate}%`} subtext={`${field.held} sessions held`} accent="text-violet-700" source={["Schedule", "AttendanceLogs"]} />
         <MetricCard title="Device connections" value={blockzie.devices.length} subtext={`${fmtDuration(blockzie.deviceSeconds)} · ${blockzie.projects.length} projects`} accent="text-sky-700" source={["Blockzie: bluetooth_sessions", "Blockzie: BlockzieProject"]} />
       </div>
+
+      <PresencePanel scopeType="institute" scopeId={instituteId} onOpen={() => onOpenPresence(`institute:${instituteId}`)} />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Section title="Classes" subtitle="Students, learning and attendance per class." source={["Classes", "AssignedClass", "AssignedCourses", "AttendanceLogs"]} action={<CsvButton filename="institute-classes.csv" rows={classRows} />}>

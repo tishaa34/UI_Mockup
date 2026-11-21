@@ -10,12 +10,13 @@ import {
   DashboardFrame, FilterSelect, MetricCard, Section, DataTable, StatusPill, MiniStat, GroupLabel
 } from "../components/ui";
 import { COLORS } from "../components/utils";
+import { PresencePanel } from "./PresencePanel";
 
 /*
  * SB-42 / SB-43: Department Insights.
  * Filters: Course, Location, Month-Year. Export: Download PDF only (no CSV on this dashboard).
  */
-export default function DepartmentDashboard({ departmentId, onDepartmentChange, onOpenCourse, onOpenInstitute }) {
+export default function DepartmentDashboard({ departmentId, onDepartmentChange, onOpenCourse, onOpenInstitute, onOpenPresence }) {
   const [courseId, setCourseId] = useState("all");
   const [location, setLocation] = useState("all");
   const [month, setMonth] = useState("all");
@@ -217,6 +218,8 @@ export default function DepartmentDashboard({ departmentId, onDepartmentChange, 
           </div>
         </Section>
       </div>
+
+      <PresencePanel scopeType="department" scopeId={departmentId} onOpen={() => onOpenPresence(`department:${departmentId}`)} />
 
       <GroupLabel>Drill-down</GroupLabel>
       <Section title="Institutes" subtitle="Click an institute to open its dashboard." source={["AssignedDepartment", "AssignedInstructor", "AssignedStudent", "AssignedCourses", "Schedule", "AttendanceLogs"]}>

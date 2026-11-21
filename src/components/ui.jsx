@@ -14,12 +14,13 @@ export function SourceTag({ source }) {
     <div className="flex flex-wrap gap-1 mt-2">
       {items.map((s) => {
         const blockzie = s.startsWith("Blockzie");
+        const planned = s.startsWith("Planned");
         return (
           <span
             key={s}
             className={cn(
               "px-2 py-0.5 rounded-md text-[10px] font-mono",
-              blockzie ? "bg-sky-50 text-sky-700" : "bg-slate-100 text-slate-600"
+              planned ? "bg-amber-50 text-amber-700" : blockzie ? "bg-sky-50 text-sky-700" : "bg-slate-100 text-slate-600"
             )}
           >
             {s}
@@ -148,17 +149,27 @@ export function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[11px] uppercase tracking-[0.18em] text-indigo-100">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-4 py-2 rounded-2xl bg-white text-slate-700 shadow-sm min-w-[170px] text-sm"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="appearance-none w-full pl-4 pr-10 py-2 rounded-2xl bg-white text-slate-700 shadow-sm min-w-[170px] text-sm leading-5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/60"
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 20 20"
+          fill="none"
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"
+        >
+          <path d="M5 7.5l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
     </label>
   );
 }

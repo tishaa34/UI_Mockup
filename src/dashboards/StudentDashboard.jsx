@@ -10,6 +10,7 @@ import {
   DashboardFrame, FilterSelect, MetricCard, Section, DataTable, StatusPill, CsvButton, EmptyState
 } from "../components/ui";
 import { COLORS } from "../components/utils";
+import { MyActivityCard } from "./PresencePanel";
 
 export default function StudentDashboard({ studentId, onStudentChange }) {
   const student = userById.get(studentId);
@@ -114,7 +115,7 @@ export default function StudentDashboard({ studentId, onStudentChange }) {
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie isAnimationActive={false} data={split} dataKey="value" nameKey="name" outerRadius={80}>
+                  <Pie isAnimationActive={false} data={split} dataKey="value" nameKey="name" outerRadius={80} stroke="#fff" strokeWidth={split.length > 1 ? 2 : 0}>
                     {split.map((s, i) => (
                       <Cell key={s.name} fill={[COLORS[2], COLORS[0], COLORS[3]][i]} />
                     ))}
@@ -154,6 +155,8 @@ export default function StudentDashboard({ studentId, onStudentChange }) {
           rows={courseRows}
         />
       </Section>
+
+      <MyActivityCard userId={studentId} />
 
       <Section title="Activity by month" subtitle="LMS logins, Blockzie logins and device connections." source={["LoginLogs", "Blockzie: sessions", "Blockzie: bluetooth_sessions"]}>
         <div className="h-[240px]">
