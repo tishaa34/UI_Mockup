@@ -266,3 +266,14 @@ export function countBy(rows, fn) {
 }
 
 export const scopeLabel = (s) => ({ STUDENT: "Student", INSTRUCTOR: "Instructor", INSTITUTE: "Institute", DEPARTMENT: "Department" })[s] || s;
+
+/* ---------- Trainers taking courses as students ---------- */
+
+/**
+ * The only marker in the database today: a Student-role account whose email is
+ * "trainer" + a number, e.g. trainer1@gmail.com, trainer12@gmail.com.
+ */
+export const TRAINER_EMAIL_PATTERN = /^trainer\d+@/i;
+export const isTraineeAccount = (user) => user?.scopeType === "STUDENT" && TRAINER_EMAIL_PATTERN.test(user.email || "");
+export const trainees = db.students.filter(isTraineeAccount);
+export const schoolStudents = db.students.filter((s) => !isTraineeAccount(s));

@@ -3,7 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
 import * as db from "../data/db";
 import {
   enrollments, summarizeEnrollments, userById, instituteIdOfStudent, classIdOfStudent, classById, lastLoginOf, loginsOf,
-  studentAttendance, blockzieIdOf, sessionSeconds, transportLabel, platformLabel, pct, fmtDate, fmtDateTime,
+  studentAttendance, blockzieIdOf, isTraineeAccount, sessionSeconds, transportLabel, platformLabel, pct, fmtDate, fmtDateTime,
   fmtDuration, monthKey, monthLabel, MONTHS,
 } from "../data/selectors";
 import {
@@ -83,7 +83,7 @@ export default function StudentDashboard({ studentId, onStudentChange }) {
 
   return (
     <DashboardFrame
-      title={`Student: ${student.fullName}`}
+      title={isTraineeAccount(student) ? `Trainer in training: ${student.fullName}` : `Student: ${student.fullName}`}
       subtitle={`${institute.fullName} · ${className}. Courses, progress, attendance, Blockzie projects and device use.`}
       breadcrumb={`Institutes / ${institute.fullName} / ${student.fullName}`}
       filters={
@@ -91,7 +91,7 @@ export default function StudentDashboard({ studentId, onStudentChange }) {
           label={`Student at ${institute.fullName}`}
           value={studentId}
           onChange={onStudentChange}
-          options={studentsHere.map((s) => ({ value: s.id, label: s.fullName }))}
+          options={studentsHere.map((s) => ({ value: s.id, label: isTraineeAccount(s) ? `${s.fullName} (${s.email})` : s.fullName }))}
         />
       }
     >

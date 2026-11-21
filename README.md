@@ -16,7 +16,7 @@ Clickable mockup of the STEMbotix insights dashboards (Jira SB-42, SB-43, SB-45)
 | Institute | SB-45. Classes, courses, trainer visits, students, Blockzie use |
 | Course | Lesson completion, learning status, institutes, students |
 | Instructor | Sessions, check-in punctuality, attendance, work logs, grading backlog |
-| Student | Profile, courses, attendance, Blockzie projects, device connections |
+| Student | Two views. **Students**: profile, courses, attendance, Blockzie projects, device connections. **Trainers in training**: trainers taking courses as students, found by their login email `trainer<number>@...` (e.g. `trainer1@gmail.com`); left out of school student numbers elsewhere |
 | Blockzie & Devices | Logins, projects, device connections (BLE / Wi-Fi / Serial), templates, downloads |
 | Online & Engagement (**planned**) | Who is online now, active today, peak, 5-minute graph, active / idle / hidden time per person, drill-down platform → department → institute → class, Excel export. Also a small panel on Department and Institute, and "My Activity" on Student |
 

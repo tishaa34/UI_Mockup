@@ -5,7 +5,7 @@ import {
 import * as db from "../data/db";
 import {
   enrollments, summarizeEnrollments, monthlyTrend, sessions, summarizeSessions, blockzieFor, countBy, transportLabel,
-  institutesOfDepartment, pct, fmtNum, fmtINR, fmtDuration, fmtDate, monthKey, MONTHS,
+  institutesOfDepartment, pct, fmtNum, fmtINR, fmtDuration, fmtDate, trainees, schoolStudents, monthKey, MONTHS,
 } from "../data/selectors";
 import {
   DashboardFrame, MetricCard, Section, GroupLabel, DataTable, StatusPill
@@ -64,7 +64,7 @@ export default function OverviewDashboard({ onOpenDepartment }) {
         <MetricCard title="Departments" value={db.departments.length} subtext="Partner programmes" source="Users (scopeType = DEPARTMENT)" />
         <MetricCard title="Institutes" value={db.institutes.length} subtext={`${db.institutes.filter((i) => i.status).length} active`} source="Users (INSTITUTE) · AssignedDepartment" />
         <MetricCard title="Instructors" value={db.instructors.length} subtext="Assigned to schools" source="Users (INSTRUCTOR) · AssignedInstructor" />
-        <MetricCard title="Students" value={fmtNum(db.students.length)} subtext="Placed in institutes" source="Users (STUDENT) · AssignedStudent" />
+        <MetricCard title="Students" value={fmtNum(schoolStudents.length)} subtext={`+ ${trainees.length} trainers in training`} source="Users (STUDENT) · AssignedStudent" />
         <MetricCard title="Cities" value={cities.size} subtext={`${new Set(db.institutes.map((i) => i.state)).size} states`} source="Users.city · Users.state" />
       </div>
 

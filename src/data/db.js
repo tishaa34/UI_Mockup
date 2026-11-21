@@ -175,6 +175,53 @@ institutes.forEach((inst) => {
   }
 });
 
+/*
+ * Trainers taking courses as students.
+ * In the real database these are ordinary Users with scopeType = STUDENT; the only
+ * thing that marks them is the email pattern trainer<number>@... (trainer1@gmail.com, ...).
+ * Here they sit in a training institute with two batches (Classes).
+ */
+const trainingCentre = {
+  id: uid("ins"),
+  fullName: "STEMbotix Training Centre",
+  email: "training@stembotix.com",
+  phone: phone(),
+  scopeType: "INSTITUTE",
+  city: "Gandhinagar",
+  state: "Gujarat",
+  country: "India",
+  status: true,
+  createdAt: new Date("2026-06-01T10:00:00+05:30"),
+};
+institutes.push(trainingCentre);
+const trainerBatches = ["Trainer Batch 1", "Trainer Batch 2"].map((className) => {
+  const cls = { id: uid("cls"), className, instituteId: trainingCentre.id, noOfStudent: 0 };
+  classes.push(cls);
+  return cls;
+});
+// The lead trainer runs the training sessions.
+assignedInstructor.push({ id: uid("ai"), instructorId: instructors[0].id, instituteId: trainingCentre.id, deletedAt: null });
+for (let n = 1; n <= 14; n += 1) {
+  const fullName = personName();
+  const trainee = {
+    id: uid("stu"),
+    fullName,
+    email: `trainer${n}@gmail.com`,
+    phone: phone(),
+    scopeType: "STUDENT",
+    status: n !== 13,
+    totalLogin: 0,
+    keycloak_id: chance(0.9) ? uid("kc") : null,
+    aiAccess: chance(0.6),
+    createdAt: randomDate(new Date("2026-06-05").getTime(), new Date("2026-08-31").getTime()),
+  };
+  students.push(trainee);
+  assignedStudent.push({ id: uid("as"), instituteId: trainingCentre.id, studentId: trainee.id, deletedAt: null });
+  const cls = trainerBatches[n <= 7 ? 0 : 1];
+  cls.noOfStudent += 1;
+  assignedClass.push({ id: uid("ac"), studentId: trainee.id, classId: cls.id, deletedAt: null });
+}
+
 /* ---------- Courses ---------- */
 
 const courseSeed = [
@@ -208,7 +255,8 @@ export const assignedCourses = [];
 institutes.forEach((inst) => {
   const deptId = deptOfInstitute(inst.id);
   const eligible = courses.filter((c) => c.courseScope === "GLOBAL" || c.departmentId === deptId);
-  const chosen = eligible.filter(() => chance(0.8));
+  // The training centre gets every course: trainers learn all of them.
+  const chosen = inst.id === trainingCentre.id ? eligible : eligible.filter(() => chance(0.8));
   (chosen.length ? chosen : eligible.slice(0, 2)).forEach((course) =>
     assignedCourses.push({
       id: uid("acr"),
