@@ -11,8 +11,9 @@ import {
   DashboardFrame, MetricCard, Section, GroupLabel, DataTable, StatusPill
 } from "../components/ui";
 import { COLORS } from "../components/utils";
+import { colleges as kcgColleges, kitDeliveries as kcgKits } from "../data/kcg";
 
-export default function OverviewDashboard({ onOpenDepartment }) {
+export default function OverviewDashboard({ onOpenDepartment, onOpenKcg }) {
   const data = useMemo(() => {
     const learning = summarizeEnrollments(enrollments);
     const field = summarizeSessions(sessions);
@@ -98,6 +99,34 @@ export default function OverviewDashboard({ onOpenDepartment }) {
         <MetricCard title="Connected time" value={fmtDuration(blockzie.deviceSeconds)} subtext="Kits and boards in use" accent="text-sky-700" source="Blockzie: bluetooth_sessions" />
         <MetricCard title="Saved projects" value={fmtNum(blockzie.projects.length)} subtext={`${blockzie.creators} creators`} accent="text-sky-700" source="Blockzie: BlockzieProject" />
         <MetricCard title="App downloads" value={fmtNum(db.downloadBlockzie.reduce((s, d) => s + d.downloadCount, 0))} subtext="Download clicks" accent="text-sky-700" source="DownloadBlockzie.downloadCount" />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <GroupLabel>KCG programme</GroupLabel>
+        <button onClick={onOpenKcg} className="text-sm text-indigo-700 font-medium hover:underline" data-html2canvas-ignore="true">
+          Open KCG Programme →
+        </button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <MetricCard title="KCG colleges" value={kcgColleges.length} subtext={`${new Set(kcgColleges.map((c) => c.clusterId)).size} clusters`} />
+        <MetricCard title="KCG students" value={fmtNum(kcgColleges.reduce((t, c) => t + c.students, 0))} subtext={`${kcgColleges.reduce((t, c) => t + c.studentsPerLevel[3], 0)} on Level 4`} />
+        <MetricCard
+          title="Kits at colleges"
+          value={`${pct(kcgKits.filter((k) => ["DELIVERED", "CONFIRMED"].includes(k.status)).length, kcgKits.length)}%`}
+          subtext={`${kcgKits.filter((k) => ["PENDING", "DISPATCHED"].includes(k.status)).length} deliveries still on the way`}
+          accent="text-emerald-700"
+        />
+        <MetricCard
+          title="Training days"
+          value={`${kcgColleges.reduce((t, c) => t + c.trainingDaysDone, 0)} / ${kcgColleges.reduce((t, c) => t + c.trainingDaysBooked, 0)}`}
+          subtext="Held / booked"
+        />
+        <MetricCard
+          title="Colleges with red flags"
+          value={kcgColleges.filter((c) => c.flags.length).length}
+          subtext="Need follow-up"
+          accent="text-rose-700"
+        />
       </div>
 
       <GroupLabel>Support, sales and AI</GroupLabel>

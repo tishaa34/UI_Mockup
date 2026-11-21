@@ -10,6 +10,7 @@ import StudentDashboard from "./dashboards/StudentDashboard";
 import BlockzieDashboard from "./dashboards/BlockzieDashboard";
 import PresenceDashboard from "./dashboards/PresenceDashboard";
 import TraineesView from "./dashboards/TraineesView";
+import KcgDashboard from "./dashboards/KcgDashboard";
 import { instituteIdOfStudent, enrollments, blockzieIdOf, schoolStudents, trainees } from "./data/selectors";
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { id: "instructor", label: "Instructor" },
   { id: "student", label: "Student" },
   { id: "blockzie", label: "Blockzie & Devices" },
+  { id: "kcg", label: "KCG Programme" },
   { id: "presence", label: "Online & Engagement", planned: true },
 ];
 
@@ -101,7 +103,7 @@ export default function App() {
           <strong> Planned</strong>: online presence and active/idle tracking, which are designed but not built yet.
         </div>
 
-        {tab === "overview" && <OverviewDashboard onOpenDepartment={openDepartment} />}
+        {tab === "overview" && <OverviewDashboard onOpenDepartment={openDepartment} onOpenKcg={() => setTab("kcg")} />}
         {tab === "department" && (
           <DepartmentDashboard
             key={departmentId}
@@ -159,6 +161,7 @@ export default function App() {
           </>
         )}
         {tab === "blockzie" && <BlockzieDashboard />}
+        {tab === "kcg" && <KcgDashboard />}
         {tab === "presence" && <PresenceDashboard key={presenceScope} initialScope={presenceScope} />}
       </div>
   );
