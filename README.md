@@ -1,16 +1,40 @@
-# React + Vite
+# STEMbotix Insights Mockup
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Clickable mockup of the STEMbotix insights dashboards (Jira SB-42, SB-43, SB-45).
 
-Currently, two official plugins are available:
+**Every card uses only data that exists today**, in one of two places:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **LMS database** (`stembotix-lms-back-end`, `prisma/schema.prisma`)
+- **Blockzie database**, read-only through the `feat/blockzie-dashboard` branch (`BLOCKZIE_DATABASE_URL`). LMS and Blockzie users are matched only by a shared `keycloak_id`.
 
-## React Compiler
+Turn on **Show data sources** (top right) to see the table behind each card.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tabs
 
-## Expanding the ESLint configuration
+| Tab | What it shows |
+|---|---|
+| Overview | Reach, learning, trainers in schools, Blockzie and devices, support, website sales, AI use (STEMbotix team only) |
+| Department | SB-42 / SB-43. Filters: Course, Location, Month-Year. Download PDF only (no CSV) |
+| Institute | SB-45. Classes, courses, trainer visits, students, Blockzie use |
+| Course | Lesson completion, learning status, institutes, students |
+| Instructor | Sessions, check-in punctuality, attendance, work logs, grading backlog |
+| Student | Profile, courses, attendance, Blockzie projects, device connections |
+| Blockzie & Devices | Logins, projects, device connections (BLE / Wi-Fi / Serial), templates, downloads |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Deliberately left out (not in either database today)
+
+Pre/post assessment scores, score improvement, impact grade, board (CBSE/ICSE), institute map,
+short LMS IDs, kits delivered to schools, live online/idle presence.
+
+## Code layout
+
+- `src/data/db.js`: seeded sample data. Each array mirrors a real table and uses real column names.
+- `src/data/selectors.js`: the joins and calculations the dashboards use.
+- `src/components/`: shared cards, tables, filters, PDF frame.
+- `src/dashboards/`: one file per tab.
+
+```bash
+npm install
+npm run dev      # local
+npm run build    # production build
+```
