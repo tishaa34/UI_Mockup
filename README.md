@@ -7,8 +7,6 @@ Clickable mockup of the STEMbotix insights dashboards (Jira SB-42, SB-43, SB-45)
 - **LMS database** (`stembotix-lms-back-end`, `prisma/schema.prisma`)
 - **Blockzie database**, read-only through the `feat/blockzie-dashboard` branch (`BLOCKZIE_DATABASE_URL`). LMS and Blockzie users are matched only by a shared `keycloak_id`.
 
-Turn on **Show data sources** (top right) to see the table behind each card.
-
 ## Tabs
 
 | Tab | What it shows |

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as db from "./data/db";
-import { cn, SourceContext } from "./components/utils";
+import { cn } from "./components/utils";
 import OverviewDashboard from "./dashboards/OverviewDashboard";
 import DepartmentDashboard from "./dashboards/DepartmentDashboard";
 import InstituteDashboard from "./dashboards/InstituteDashboard";
@@ -24,7 +24,6 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState("overview");
-  const [showSources, setShowSources] = useState(false);
   const [departmentId, setDepartmentId] = useState(db.departments[0].id);
   const [instituteId, setInstituteId] = useState(db.institutes[0].id);
   const [courseId, setCourseId] = useState(db.courses[0].id);
@@ -66,7 +65,6 @@ export default function App() {
   };
 
   return (
-    <SourceContext.Provider value={showSources}>
       <div className="min-h-screen bg-[#f6f7fb] p-5 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex flex-wrap gap-2">
@@ -92,16 +90,11 @@ export default function App() {
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
-            <input type="checkbox" checked={showSources} onChange={(e) => setShowSources(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
-            Show data sources
-          </label>
         </div>
 
         <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <strong>Sample data.</strong> Cards use fields that exist today, except anything marked
-          <strong> Planned</strong>: online presence and active/idle tracking, which are designed but not built yet. Turn on
-          &ldquo;Show data sources&rdquo; to see the table behind each card.
+          <strong> Planned</strong>: online presence and active/idle tracking, which are designed but not built yet.
         </div>
 
         {tab === "overview" && <OverviewDashboard onOpenDepartment={openDepartment} />}
@@ -139,6 +132,5 @@ export default function App() {
         {tab === "blockzie" && <BlockzieDashboard />}
         {tab === "presence" && <PresenceDashboard key={presenceScope} initialScope={presenceScope} />}
       </div>
-    </SourceContext.Provider>
   );
 }
