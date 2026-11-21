@@ -99,8 +99,7 @@ export default function App() {
         </div>
 
         <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <strong>Sample data.</strong> Cards use fields that exist today (the LMS database, and the Blockzie database read
-          through the <code className="font-mono">feat/blockzie-dashboard</code> branch), except anything marked
+          <strong>Sample data.</strong> Cards use fields that exist today, except anything marked
           <strong> Planned</strong>: online presence and active/idle tracking, which are designed but not built yet. Turn on
           &ldquo;Show data sources&rdquo; to see the table behind each card.
         </div>
